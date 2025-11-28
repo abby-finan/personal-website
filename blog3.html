@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Virtual Lava Lamp: Two Blobs</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    body {
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle at 60% 40%, #ffe066 0%, #ffb347 60%, #ffcc80 100%);
+      position: relative;
+    }
+    #lava-blob {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .lava-blob-shape {
+      position: absolute;
+      border-radius: 50% 60% 40% 60% / 60% 40% 60% 50%;
+      background: radial-gradient(circle at 60% 40%, #ff80ab 0%, #ffb347 60%, #ffe066 100%);
+      opacity: 0.55;
+      mix-blend-mode: lighten;
+      filter: blur(48px);
+      transition: border-radius 0.8s cubic-bezier(.77,0,.18,1);
+      will-change: left, top, border-radius, background;
+    }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body>
+  <div id="lava-blob"></div>
+  <script>
+    // Helper for random border-radius
+    function randomRadius() {
+      return `${40 + Math.random()*60}% ${40 + Math.random()*60}% ${40 + Math.random()*60}% ${40 + Math.random()*60}% / ${40 + Math.random()*60}% ${40 + Math.random()*60}% ${40 + Math.random()*60}% ${40 + Math.random()*60}%`;
+    }
+    // Helper for random gradient colors
+    function randomGradient() {
+      const colors = [
+        '#ff80ab', '#ffb347', '#ffe066', '#ffd700', '#ff33cc',
+        '#ff69b4', '#ffa07a', '#ff00cc', '#ff6600', '#ffcc00'
+      ];
+      const c1 = colors[Math.floor(Math.random()*colors.length)];
+      const c2 = colors[Math.floor(Math.random()*colors.length)];
+      const c3 = colors[Math.floor(Math.random()*colors.length)];
+      return {c1, c2, c3};
+    }
+
+    // Blob object
+    function createBlob({size, x, y, speed}) {
+      const blob = document.createElement('div');
+      blob.className = 'lava-blob-shape';
+      blob.style.width = size + 'vw';
+      blob.style.height = size + 'vw';
+      blob.style.left = x + 'vw';
+      blob.style.top = y + 'vh';
+      blob._size = size;
+      blob._x = x;
+      blob._y = y;
+      blob._vx = (Math.random() - 0.5) * speed;
+      blob._vy = (Math.random() - 0.5) * speed;
+      blob._t = Math.random() * 100;
+      blob._gradient = randomGradient();
+      blob._morphing = true;
+      return blob;
+    }
+
+    // Setup
+    const container = document.getElementById('lava-blob');
+    const blobs = [
+      createBlob({size: 40, x: 30, y: 30, speed: 0.5}), // big blob
+      createBlob({size: 20, x: 60, y: 60, speed: 0.7})  // small blob
+    ];
+    blobs.forEach(b => container.appendChild(b));
+
+    // Morph shape
+    function morphShape(blob) {
+      if (!blob._morphing) return;
+      gsap.to(blob, {
+        borderRadius: randomRadius(),
+        duration: 0.7,
+        ease: "power1.inOut",
+        onComplete: () => morphShape(blob)
+      });
+    }
+    blobs.forEach(morphShape);
+
+    // Morph color
+    blobs.forEach(blob => {
+      function morphColor() {
+        const nextGradient = randomGradient();
+        gsap.to(blob._gradient, {
+          c1: nextGradient.c1,
+          c2: nextGradient.c2,
+          c3: nextGradient.c3,
+          duration: 1.5,
+          ease: "power1.inOut",
+          onUpdate: () => {
+            blob.style.background = `radial-gradient(circle at 60% 40%, ${blob._gradient.c1} 0%, ${blob._gradient.c2} 60%, ${blob._gradient.c3} 100%)`;
+          },
+          onComplete: () => {
+            blob._gradient = nextGradient;
+            morphColor();
+          }
+        });
+      }
+      morphColor();
+    });
+
+    // Animation loop
+    function animate() {
+      blobs.forEach((blob, i) => {
+        blob._t += 0.012 + Math.random() * 0.002;
+        // More movement, but still slow and random
+        let floatX = 30 + 30 * Math.sin(blob._t * (0.7 + i*0.2));
+        let floatY = 30 + 30 * Math.cos(blob._t * (0.5 + i*0.3));
+        blob._x += (floatX - blob._x) * 0.08;
+        blob._y += (floatY - blob._y) * 0.08;
+        blob.style.left = blob._x + 'vw';
+        blob.style.top = blob._y + 'vh';
+        blob.style.width = blob._size + 'vw';
+        blob.style.height = blob._size + 'vw';
+      });
+
+      // Collision detection and gentle bump/morph
+      const b0 = blobs[0], b1 = blobs[1];
+      const dx = (b0._x - b1._x) * window.innerWidth / 100;
+      const dy = (b0._y - b1._y) * window.innerHeight / 100;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const minDist = ((b0._size + b1._size) / 2) * window.innerWidth / 100 * 0.7;
+      if (dist < minDist) {
+        // Gently morph both blobs when they bump
+        gsap.to([b0, b1], {
+          borderRadius: randomRadius(),
+          duration: 0.5,
+          ease: "power1.inOut"
+        });
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+<ul class="ul1" style="list-style-type: none;">
+  <li class="li5">
+    <a href="index.html"><span class="s4">← Exit this epic digital lava lamp experience</span></a>
+  </li>
+</ul>
+</body>
+</html>
