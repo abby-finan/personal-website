@@ -7,7 +7,11 @@
   <meta name="Generator" content="Cocoa HTML Writer">
   <meta name="CocoaVersion" content="2685.2">
   <style type="text/css">
-    body {background-color: #efefef; margin: 0;}
+    body {
+      background-color: #efefef;
+      /* margin: 0; <-- REMOVE THIS */
+      padding: 8px; /* ADD THIS for standard spacing */
+    }
     p.p1 {margin: 0.0px 0.0px 9.0px 0.0px; font: 18.0px Helvetica; color: #0c0c0c; -webkit-text-stroke: #0c0c0c}
     p.p2 {margin: 0.0px 0.0px 9.0px 0.0px; font: 13.0px Helvetica; color: #0c0c0c; -webkit-text-stroke: #0c0c0c; min-height: 16.0px}
     p.p3 {margin: 0.0px 0.0px 0.0px 0.0px; font: 13.2px Helvetica; color: #111111; -webkit-text-stroke: #111111}
@@ -26,7 +30,6 @@
     span.s8 {font: 10.8px Helvetica; font-kerning: none}
     span.s9 {font: 10.8px Helvetica; font-kerning: none; color: #2f2f2f; -webkit-text-stroke: 0px #2f2f2f}
     ul.ul1 {list-style-type: none}
-
     /* Ball Animation Styles */
     .bottom-animation-container {
       position: fixed;
@@ -68,19 +71,16 @@
   <ul class="ul1">
     <li class="li5"><a href="index.html"><span class="s4">← Back to index</span></a></li>
   </ul>
-
   <!-- Ball Animation Section (fixed at bottom) -->
   <div class="bottom-animation-container">
     <div class="bottom-animation-ball" id="bottomBall"></div>
     <div class="bottom-animation-line"></div>
   </div>
-
   <script>
     const ball = document.getElementById('bottomBall');
     const container = document.querySelector('.bottom-animation-container');
     let pos = -40; // Start just off the left edge
     const speed = 2; // pixels per frame
-
     function animate() {
       pos += speed;
       if (pos > container.offsetWidth) {
