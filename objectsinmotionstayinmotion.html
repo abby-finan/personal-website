@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>objects in motion stay in motion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background-color: #efefef;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    p.p1 { font-size: 1.5rem; color: #0c0c0c; margin-bottom: 0.5em; font-weight: normal; }
+    p.p2, p.p3, p.p4, p.p5, li.li5, li.li6 { font-size: 1rem; color: #111; margin-bottom: 0.5em; }
+    ul.ul1 { list-style-type: none; padding: 0; }
+    a { color: #032d99; text-decoration: underline; font-size: 1rem; }
+    .s4 { text-decoration: underline; }
+    /* Ball Animation Styles */
+    .bottom-animation-container {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100vw;
+      height: 60px;
+      background: transparent;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .bottom-animation-line {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 4px;
+      background: #000;
+    }
+    .bottom-animation-ball {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      width: 40px;
+      height: 40px;
+      background: #000;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: left 0.1s linear;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p class="p1">Objects in motion stay in motion</p>
+    <p class="p2"></p>
+    <p class="p3">Ooo yea, gonna write some stuff here about growing, and being a yes man, etc.</p>
+    <p class="p3">^^ but also maybe that's a bit high and mighty...i do like the little ball animation though...</p>
+    <p class="p4"></p>
+    <ul class="ul1">
+      <li class="li5"><a href="index.html"><span class="s4">← Back to index</span></a></li>
+    </ul>
+  </div>
+  <!-- Ball Animation Section (fixed at bottom) -->
+  <div class="bottom-animation-container">
+    <div class="bottom-animation-ball" id="bottomBall"></div>
+    <div class="bottom-animation-line"></div>
+  </div>
+  <script>
+    const ball = document.getElementById('bottomBall');
+    const container = document.querySelector('.bottom-animation-container');
+    let pos = -40; // Start just off the left edge
+    const speed = 2; // pixels per frame
+    function animate() {
+      pos += speed;
+      if (pos > container.offsetWidth) {
+        pos = -ball.offsetWidth; // Reset to just off the left edge
+      }
+      ball.style.left = pos + 'px';
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+</body>
+</html>
