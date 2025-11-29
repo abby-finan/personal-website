@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>pool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background-color: #efefef;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    .back-link {
+      display: block;
+      margin-bottom: 16px;
+      color: #032d99;
+      text-decoration: underline;
+      font-size: 1rem;
+      font-family: inherit;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    #pool-canvas {
+      width: 100%;
+      max-width: 600px;
+      height: 340px;
+      background: #efefef;
+      display: block;
+      margin: 0 auto;
+      touch-action: none;
+    }
+    @media (max-width: 700px) {
+      #pool-canvas { height: 220px; }
+      .container { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Exit to index</a>
+    <canvas id="pool-canvas" width="600" height="340"></canvas>
+  </div>
+  <script>
+    // --- Minimalistic Pool Ball Game ---
+
+    const canvas = document.getElementById('pool-canvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    // Ball colors (15 + cue)
+    const ballColors = [
+      "#FFD700", "#0000FF", "#FF0000", "#008000", "#800080", "#FFA500", "#A52A2A", "#000000",
+      "#FFFFFF", "#00FFFF", "#FF69B4", "#B22222", "#228B22", "#8B4513", "#DC143C"
+    ];
+
+    // Triangle formation
+    const balls = [];
+    const ballRadius = 14;
+    let startX = W/2, startY = 90, row = 0, count = 1;
+    for (let i = 0; i < 15; i++) {
+      if (count > row) { row++; count = 0; }
+      let x = startX + (count - row/2) * (ballRadius*2.1);
+      let y = startY + row * (ballRadius*1.8);
+      balls.push({
+        x, y, vx: 0, vy: 0, radius: ballRadius, color: ballColors[i]
+      });
+      count++;
+    }
+    // Cue ball
+    const cueBall = { x: W/2, y: H-50, vx: 0, vy: 0, radius: ballRadius, color: "#fff" };
+    balls.push(cueBall);
+
+    // Pool stick state
+    let stick = { x: cueBall.x, y: cueBall.y, angle: -Math.PI/2, pulling: false, pullDist: 0, dragging: false };
+
+    // Track which ball is selected for stick
+    let selectedBall = cueBall;
+
+    // Draw balls and stick (no highlight/border)
+    function draw() {
+      ctx.clearRect(0,0,W,H);
+      // Balls
+      balls.forEach(ball => {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, 2*Math.PI);
+        ctx.fillStyle = ball.color;
+        ctx.fill();
+      });
+      // Stick (thinner, minimal)
+      if (stick.dragging || stick.pulling) {
+        ctx.save();
+        ctx.translate(stick.x, stick.y);
+        ctx.rotate(stick.angle);
+        ctx.fillStyle = "#8B4513";
+        ctx.fillRect(-2, 0, 4, -stick.pullDist-60);
+        ctx.restore();
+      }
+    }
+
+    // Realistic physics: friction, collision, energy transfer
+    function update() {
+      const friction = 0.98; // Realistic friction for pool balls
+      balls.forEach(ball => {
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+        // Friction slows balls down
+        ball.vx *= friction;
+        ball.vy *= friction;
+        // Stop ball if velocity is very low
+        if (Math.abs(ball.vx) < 0.05) ball.vx = 0;
+        if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
+        // Wall bounce
+        if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx *= -0.9; }
+        if (ball.x > W-ball.radius) { ball.x = W-ball.radius; ball.vx *= -0.9; }
+        if (ball.y < ball.radius) { ball.y = ball.radius; ball.vy *= -0.9; }
+        if (ball.y > H-ball.radius) { ball.y = H-ball.radius; ball.vy *= -0.9; }
+      });
+      // Ball-ball collision (realistic energy transfer)
+      for (let i=0; i<balls.length; i++) {
+        for (let j=i+1; j<balls.length; j++) {
+          ballCollision(balls[i], balls[j]);
+        }
+      }
+    }
+
+    // Realistic 2D elastic collision
+    function ballCollision(ballA, ballB) {
+      const dx = ballB.x - ballA.x;
+      const dy = ballB.y - ballA.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const minDist = ballA.radius + ballB.radius;
+
+      if (dist < minDist) {
+        // Normal vector
+        const nx = dx / dist;
+        const ny = dy / dist;
+
+        // Relative velocity
+        const dvx = ballA.vx - ballB.vx;
+        const dvy = ballA.vy - ballB.vy;
+
+        // Velocity along normal
+        const vn = dvx * nx + dvy * ny;
+
+        // Only resolve if balls are moving towards each other
+        if (vn < 0) {
+          // Elastic collision (equal mass)
+          const impulse = -vn;
+          ballA.vx += impulse * nx;
+          ballA.vy += impulse * ny;
+          ballB.vx -= impulse * nx;
+          ballB.vy -= impulse * ny;
+        }
+
+        // Move balls apart
+        const overlap = minDist - dist + 0.1;
+        ballA.x -= nx * overlap / 2;
+        ballA.y -= ny * overlap / 2;
+        ballB.x += nx * overlap / 2;
+        ballB.y += ny * overlap / 2;
+      }
+    }
+
+    // Animation loop
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+    loop();
+
+    // Input: mouse (desktop) and touch (mobile)
+    let dragging = false;
+
+    function getPointer(e) {
+      let rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      } else {
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+    }
+
+    function startDrag(e) {
+      let p = getPointer(e);
+      // Find the closest ball to the pointer
+      let closest = null, minDist = Infinity;
+      balls.forEach(ball => {
+        let dx = p.x - ball.x, dy = p.y - ball.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < ball.radius + 20 && dist < minDist) {
+          minDist = dist;
+          closest = ball;
+        }
+      });
+      if (closest) {
+        selectedBall = closest;
+        stick.x = selectedBall.x;
+        stick.y = selectedBall.y;
+        dragging = true;
+        stick.dragging = true;
+        stick.pulling = true;
+      }
+    }
+
+    function moveDrag(e) {
+      if (dragging) {
+        let p = getPointer(e);
+        let dx = p.x - selectedBall.x, dy = p.y - selectedBall.y;
+        stick.angle = Math.atan2(dy, dx);
+        stick.pullDist = Math.min(100, Math.sqrt(dx*dx + dy*dy));
+      }
+    }
+
+    function endDrag(e) {
+      if (dragging) {
+        // Shoot selected ball
+        selectedBall.vx += -Math.cos(stick.angle) * stick.pullDist * 0.35;
+        selectedBall.vy += -Math.sin(stick.angle) * stick.pullDist * 0.35;
+        stick.pulling = false;
+        stick.pullDist = 0;
+        stick.dragging = false;
+        dragging = false;
+      }
+    }
+
+    // Mouse
+    canvas.addEventListener('mousedown', startDrag);
+    canvas.addEventListener('mousemove', moveDrag);
+    canvas.addEventListener('mouseup', endDrag);
+
+    // Touch
+    canvas.addEventListener('touchstart', startDrag);
+    canvas.addEventListener('touchmove', moveDrag);
+    canvas.addEventListener('touchend', endDrag);
+
+    // Stick follows mouse when not dragging
+    canvas.addEventListener('mousemove', function(e) {
+      if (!dragging) {
+        let p = getPointer(e);
+        let dx = p.x - selectedBall.x, dy = p.y - selectedBall.y;
+        stick.angle = Math.atan2(dy, dx);
+        stick.x = selectedBall.x;
+        stick.y = selectedBall.y;
+        stick.pullDist = 0;
+      }
+    });
+    canvas.addEventListener('touchmove', function(e) {
+      if (!dragging) {
+        let p = getPointer(e);
+        let dx = p.x - selectedBall.x, dy = p.y - selectedBall.y;
+        stick.angle = Math.atan2(dy, dx);
+        stick.x = selectedBall.x;
+        stick.y = selectedBall.y;
+        stick.pullDist = 0;
+      }
+    });
+  </script>
+</body>
+</html>
