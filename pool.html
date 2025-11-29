@@ -2,24 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>pool</title>
+  <title>Minimalistic Pool Ball Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      background-color: #efefef;
+    html, body {
+      height: 100%;
       margin: 0;
       padding: 0;
+      background: #efefef;
+      overflow: hidden;
+    }
+    body {
+      width: 100vw;
+      height: 100vh;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 16px;
-      box-sizing: border-box;
+    #pool-canvas {
+      display: block;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #efefef;
+      touch-action: none;
     }
     .back-link {
-      display: block;
-      margin-bottom: 16px;
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 10;
       color: #032d99;
       text-decoration: underline;
       font-size: 1rem;
@@ -27,33 +38,41 @@
       background: none;
       border: none;
       cursor: pointer;
+      opacity: 0.7;
+      padding: 4px 8px;
+      border-radius: 4px;
     }
-    #pool-canvas {
-      width: 100%;
-      max-width: 600px;
-      height: 340px;
-      background: #efefef;
-      display: block;
-      margin: 0 auto;
-      touch-action: none;
-    }
-    @media (max-width: 700px) {
-      #pool-canvas { height: 220px; }
-      .container { padding: 8px; }
+    .back-link:hover {
+      opacity: 1;
+      background: #e0eaff;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <a href="index.html" class="back-link">← Exit to index</a>
-    <canvas id="pool-canvas" width="600" height="340"></canvas>
-  </div>
+  <a href="index.html" class="back-link">← Exit to index</a>
+  <canvas id="pool-canvas"></canvas>
   <script>
     // --- Minimalistic Pool Ball Game ---
 
     const canvas = document.getElementById('pool-canvas');
     const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
+
+    // Responsive sizing
+    let W = window.innerWidth;
+    let H = window.innerHeight;
+
+    function resizeCanvas() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+      // Reposition balls if needed (optional: keep balls in bounds)
+      balls.forEach(ball => {
+        ball.x = Math.min(Math.max(ball.x, ball.radius), W - ball.radius);
+        ball.y = Math.min(Math.max(ball.y, ball.radius), H - ball.radius);
+      });
+    }
+    window.addEventListener('resize', resizeCanvas);
 
     // Ball colors (15 + cue)
     const ballColors = [
@@ -61,33 +80,34 @@
       "#FFFFFF", "#00FFFF", "#FF69B4", "#B22222", "#228B22", "#8B4513", "#DC143C"
     ];
 
-    // Triangle formation
-    const balls = [];
-    const ballRadius = 14;
-    let startX = W/2, startY = 90, row = 0, count = 1;
-    for (let i = 0; i < 15; i++) {
-      if (count > row) { row++; count = 0; }
-      let x = startX + (count - row/2) * (ballRadius*2.1);
-      let y = startY + row * (ballRadius*1.8);
-      balls.push({
-        x, y, vx: 0, vy: 0, radius: ballRadius, color: ballColors[i]
-      });
-      count++;
+    // Ball setup
+    let balls = [];
+    let ballRadius = Math.max(14, Math.min(W, H) / 32); // scale radius to screen
+    function setupBalls() {
+      balls = [];
+      ballRadius = Math.max(14, Math.min(W, H) / 32);
+      let startX = W/2, startY = H/4, row = 0, count = 1;
+      for (let i = 0; i < 15; i++) {
+        if (count > row) { row++; count = 0; }
+        let x = startX + (count - row/2) * (ballRadius*2.1);
+        let y = startY + row * (ballRadius*1.8);
+        balls.push({
+          x, y, vx: 0, vy: 0, radius: ballRadius, color: ballColors[i]
+        });
+        count++;
+      }
+      // Cue ball
+      balls.push({ x: W/2, y: H - ballRadius*4, vx: 0, vy: 0, radius: ballRadius, color: "#fff" });
     }
-    // Cue ball
-    const cueBall = { x: W/2, y: H-50, vx: 0, vy: 0, radius: ballRadius, color: "#fff" };
-    balls.push(cueBall);
+    setupBalls();
 
     // Pool stick state
-    let stick = { x: cueBall.x, y: cueBall.y, angle: -Math.PI/2, pulling: false, pullDist: 0, dragging: false };
-
-    // Track which ball is selected for stick
-    let selectedBall = cueBall;
+    let stick = { x: balls[balls.length-1].x, y: balls[balls.length-1].y, angle: -Math.PI/2, pulling: false, pullDist: 0, dragging: false };
+    let selectedBall = balls[balls.length-1];
 
     // Draw balls and stick (no highlight/border)
     function draw() {
       ctx.clearRect(0,0,W,H);
-      // Balls
       balls.forEach(ball => {
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.radius, 0, 2*Math.PI);
@@ -100,21 +120,19 @@
         ctx.translate(stick.x, stick.y);
         ctx.rotate(stick.angle);
         ctx.fillStyle = "#8B4513";
-        ctx.fillRect(-2, 0, 4, -stick.pullDist-60);
+        ctx.fillRect(-2, 0, 4, -stick.pullDist-ballRadius*4.5);
         ctx.restore();
       }
     }
 
     // Realistic physics: friction, collision, energy transfer
     function update() {
-      const friction = 0.98; // Realistic friction for pool balls
+      const friction = 0.98;
       balls.forEach(ball => {
         ball.x += ball.vx;
         ball.y += ball.vy;
-        // Friction slows balls down
         ball.vx *= friction;
         ball.vy *= friction;
-        // Stop ball if velocity is very low
         if (Math.abs(ball.vx) < 0.05) ball.vx = 0;
         if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
         // Wall bounce
@@ -123,7 +141,7 @@
         if (ball.y < ball.radius) { ball.y = ball.radius; ball.vy *= -0.9; }
         if (ball.y > H-ball.radius) { ball.y = H-ball.radius; ball.vy *= -0.9; }
       });
-      // Ball-ball collision (realistic energy transfer)
+      // Ball-ball collision
       for (let i=0; i<balls.length; i++) {
         for (let j=i+1; j<balls.length; j++) {
           ballCollision(balls[i], balls[j]);
@@ -137,30 +155,19 @@
       const dy = ballB.y - ballA.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       const minDist = ballA.radius + ballB.radius;
-
       if (dist < minDist) {
-        // Normal vector
         const nx = dx / dist;
         const ny = dy / dist;
-
-        // Relative velocity
         const dvx = ballA.vx - ballB.vx;
         const dvy = ballA.vy - ballB.vy;
-
-        // Velocity along normal
         const vn = dvx * nx + dvy * ny;
-
-        // Only resolve if balls are moving towards each other
         if (vn < 0) {
-          // Elastic collision (equal mass)
           const impulse = -vn;
           ballA.vx += impulse * nx;
           ballA.vy += impulse * ny;
           ballB.vx -= impulse * nx;
           ballB.vy -= impulse * ny;
         }
-
-        // Move balls apart
         const overlap = minDist - dist + 0.1;
         ballA.x -= nx * overlap / 2;
         ballA.y -= ny * overlap / 2;
@@ -179,7 +186,6 @@
 
     // Input: mouse (desktop) and touch (mobile)
     let dragging = false;
-
     function getPointer(e) {
       let rect = canvas.getBoundingClientRect();
       if (e.touches) {
@@ -197,7 +203,6 @@
 
     function startDrag(e) {
       let p = getPointer(e);
-      // Find the closest ball to the pointer
       let closest = null, minDist = Infinity;
       balls.forEach(ball => {
         let dx = p.x - ball.x, dy = p.y - ball.y;
@@ -222,13 +227,12 @@
         let p = getPointer(e);
         let dx = p.x - selectedBall.x, dy = p.y - selectedBall.y;
         stick.angle = Math.atan2(dy, dx);
-        stick.pullDist = Math.min(100, Math.sqrt(dx*dx + dy*dy));
+        stick.pullDist = Math.min(ballRadius*7, Math.sqrt(dx*dx + dy*dy));
       }
     }
 
     function endDrag(e) {
       if (dragging) {
-        // Shoot selected ball
         selectedBall.vx += -Math.cos(stick.angle) * stick.pullDist * 0.35;
         selectedBall.vy += -Math.sin(stick.angle) * stick.pullDist * 0.35;
         stick.pulling = false;
@@ -269,6 +273,19 @@
         stick.pullDist = 0;
       }
     });
+
+    // Re-setup balls and resize canvas on orientation change or resize
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      setupBalls();
+      stick.x = balls[balls.length-1].x;
+      stick.y = balls[balls.length-1].y;
+      selectedBall = balls[balls.length-1];
+    });
+
+    // Initial sizing
+    resizeCanvas();
+
   </script>
 </body>
 </html>
