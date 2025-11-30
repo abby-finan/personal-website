@@ -104,15 +104,19 @@
     function setupBalls() {
       balls = [];
       ballRadius = Math.max(14, Math.min(W, H) / 32);
-      let startX = W/2, startY = H/4, row = 0, count = 1;
-      for (let i = 0; i < 15; i++) {
-        if (count > row) { row++; count = 0; }
-        let x = startX + (count - row/2) * (ballRadius*2.1);
-        let y = startY + row * (ballRadius*1.8);
-        balls.push({
-          x, y, vx: 0, vy: 0, radius: ballRadius, color: ballColors[i]
-        });
-        count++;
+      let startX = W/2;
+      let startY = H/4;
+      let colorIndex = 0;
+
+      // Triangle formation: 5 rows
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col <= row; col++) {
+          let x = startX + (col - row/2) * (ballRadius * 2.1);
+          let y = startY + row * (ballRadius * 1.8);
+          balls.push({
+            x, y, vx: 0, vy: 0, radius: ballRadius, color: ballColors[colorIndex++]
+          });
+        }
       }
       // Cue ball
       balls.push({ x: W/2, y: H - ballRadius*4, vx: 0, vy: 0, radius: ballRadius, color: "#fff" });
