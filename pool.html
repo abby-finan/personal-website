@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Minimalistic Pool Ball Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     html, body {
       height: 100%;
@@ -42,18 +42,26 @@
       padding: 4px 8px;
       border-radius: 4px;
     }
-    .back-link:hover {
-      opacity: 1;
-      background: #e0eaff;
-    }
+.back-link:hover {
+  background: none;
+  outline: none;
+  box-shadow: none;
+}
+    /* Remove focus outline for mouse clicks, keep for keyboard navigation */
+.back-link:focus {
+  outline: none;
+  box-shadow: none;
+}
+.back-link:focus-visible {
+  outline: auto;
+}
   </style>
 </head>
 <body>
-  <a href="index.html" class="back-link">← Exit to index</a>
+  <a href="index.html" class="back-link">← Back to index</a>
   <canvas id="pool-canvas"></canvas>
   <script>
     // --- Minimalistic Pool Ball Game ---
-
     const canvas = document.getElementById('pool-canvas');
     const ctx = canvas.getContext('2d');
 
@@ -64,15 +72,24 @@
     function resizeCanvas() {
       W = window.innerWidth;
       H = window.innerHeight;
-      canvas.width = W;
-      canvas.height = H;
+      const dpr = window.devicePixelRatio || 1;
+
+      // Set CSS size
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      // Set actual pixel buffer size
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+
+      // Scale context so drawing coordinates match CSS pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
       // Reposition balls if needed (optional: keep balls in bounds)
       balls.forEach(ball => {
         ball.x = Math.min(Math.max(ball.x, ball.radius), W - ball.radius);
         ball.y = Math.min(Math.max(ball.y, ball.radius), H - ball.radius);
       });
     }
-    window.addEventListener('resize', resizeCanvas);
 
     // Ball colors (15 + cue)
     const ballColors = [
@@ -83,6 +100,7 @@
     // Ball setup
     let balls = [];
     let ballRadius = Math.max(14, Math.min(W, H) / 32); // scale radius to screen
+
     function setupBalls() {
       balls = [];
       ballRadius = Math.max(14, Math.min(W, H) / 32);
@@ -99,6 +117,7 @@
       // Cue ball
       balls.push({ x: W/2, y: H - ballRadius*4, vx: 0, vy: 0, radius: ballRadius, color: "#fff" });
     }
+
     setupBalls();
 
     // Pool stick state
@@ -200,7 +219,6 @@
         };
       }
     }
-
     function startDrag(e) {
       let p = getPointer(e);
       let closest = null, minDist = Infinity;
@@ -221,7 +239,6 @@
         stick.pulling = true;
       }
     }
-
     function moveDrag(e) {
       if (dragging) {
         let p = getPointer(e);
@@ -230,7 +247,6 @@
         stick.pullDist = Math.min(ballRadius*7, Math.sqrt(dx*dx + dy*dy));
       }
     }
-
     function endDrag(e) {
       if (dragging) {
         selectedBall.vx += -Math.cos(stick.angle) * stick.pullDist * 0.35;
@@ -241,17 +257,14 @@
         dragging = false;
       }
     }
-
     // Mouse
     canvas.addEventListener('mousedown', startDrag);
     canvas.addEventListener('mousemove', moveDrag);
     canvas.addEventListener('mouseup', endDrag);
-
     // Touch
     canvas.addEventListener('touchstart', startDrag);
     canvas.addEventListener('touchmove', moveDrag);
     canvas.addEventListener('touchend', endDrag);
-
     // Stick follows mouse when not dragging
     canvas.addEventListener('mousemove', function(e) {
       if (!dragging) {
@@ -273,7 +286,6 @@
         stick.pullDist = 0;
       }
     });
-
     // Re-setup balls and resize canvas on orientation change or resize
     window.addEventListener('resize', () => {
       resizeCanvas();
@@ -282,10 +294,8 @@
       stick.y = balls[balls.length-1].y;
       selectedBall = balls[balls.length-1];
     });
-
     // Initial sizing
     resizeCanvas();
-
   </script>
 </body>
 </html>
