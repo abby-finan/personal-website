@@ -1,11 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Pool: Magic Black Hole of Doom</title>
+  <title>pool</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- Web font for consistency -->
-  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
   <style>
     html, body {
       height: 100%;
@@ -17,7 +16,7 @@
     body {
       width: 100vw;
       height: 100vh;
-      font-family: 'Roboto', Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     #pool-canvas {
       display: block;
@@ -100,40 +99,17 @@
       }
       // Cue ball
       balls.push({ x: W / 2, y: H - ballRadius * 4, vx: 0, vy: 0, radius: ballRadius, color: "#fff" });
-
-      // Timer and leaderboard reset
-      startTime = Date.now();
-      elapsedTime = 0;
-      timerRunning = true;
-      nameEntryActive = false;
-      playerName = "";
     }
 
     setupBalls();
-
-    // Black hole properties (smaller radius for iOS)
-    const blackHole = {
-      x: () => W - W * 0.08,
-      y: () => H * 0.08,
-      radius: Math.max(20, Math.min(W, H) / 24)
-    };
 
     // Aiming Mechanic
     let aiming = false;
     let aimX = 0, aimY = 0;
     let selectedBall = null;
 
-    // Timer and leaderboard variables
-    let startTime = Date.now();
-    let elapsedTime = 0;
-    let timerRunning = true;
-    let nameEntryActive = false;
-    let playerName = "";
-    let leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-
     // Mouse input
     canvas.addEventListener('mousedown', function(e) {
-      if (balls.length === 0) return;
       let rect = canvas.getBoundingClientRect();
       let x = e.clientX - rect.left;
       let y = e.clientY - rect.top;
@@ -176,7 +152,6 @@
 
     // Touch input
     canvas.addEventListener('touchstart', function(e) {
-      if (balls.length === 0) return;
       let rect = canvas.getBoundingClientRect();
       let x = e.touches[0].clientX - rect.left;
       let y = e.touches[0].clientY - rect.top;
@@ -217,101 +192,9 @@
       }
     });
 
-    // Draw black hole (scaled, purple/black gradient)
-    function drawBlackHole(ctx) {
-      let x = blackHole.x();
-      let y = blackHole.y();
-      let r = blackHole.radius;
-      let grad = ctx.createRadialGradient(x, y, r * 0.25, x, y, r);
-      grad.addColorStop(0, "#a020f0");
-      grad.addColorStop(0.5, "#4b006e");
-      grad.addColorStop(1, "#000");
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, 2 * Math.PI);
-      ctx.fillStyle = grad;
-      ctx.shadowColor = "#a020f0";
-      ctx.shadowBlur = r * 0.5;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.restore();
-    }
-
-    // Draw label just below the black hole
-    function drawArrowAndLabel(ctx) {
-      let fontSize = Math.max(12, Math.round(W / 40));
-      ctx.save();
-      ctx.font = `${fontSize}px 'Roboto', Arial, sans-serif`;
-      ctx.fillStyle = "#a020f0";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        "magic black hole of doom",
-        blackHole.x(),
-        blackHole.y() + blackHole.radius + fontSize * 1.2
-      );
-      ctx.restore();
-    }
-
-    // Draw timer at top center
-    function drawTimer(ctx) {
-      let fontSize = Math.max(10, Math.round(W / 48));
-      ctx.save();
-      ctx.font = `${fontSize}px 'Roboto', Arial, sans-serif`;
-      ctx.fillStyle = "#a020f0";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        `hurry up and get da balls in da hole: ${elapsedTime.toFixed(2)}s`,
-        W / 2,
-        fontSize * 1.5
-      );
-      ctx.restore();
-    }
-
-    // Draw endgame, name entry, and leaderboard
-    function drawEndgame(ctx) {
-      let endFontSize = Math.max(18, Math.round(W / 24));
-      ctx.save();
-      ctx.font = `${endFontSize}px 'Roboto', Arial, sans-serif`;
-      ctx.fillStyle = "#a020f0";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        "welp everything is now in the ominous black hole",
-        W / 2,
-        H / 2 - 40
-      );
-      ctx.font = `bold ${Math.max(14, Math.round(W / 32))}px 'Roboto', Arial, sans-serif`;
-      ctx.fillText("Quit", W / 2 - 70, H / 2 + 28);
-      ctx.fillText("Play this dumb ahh game again!", W / 2 + 70, H / 2 + 28);
-
-      // Name entry
-      if (nameEntryActive) {
-        ctx.font = `${endFontSize}px 'Roboto', Arial, sans-serif`;
-        ctx.fillText("Enter your name:", W / 2, H / 2 + 80);
-        ctx.fillText(playerName, W / 2, H / 2 + 120);
-      }
-
-      // Leaderboard
-      if (leaderboard.length > 0) {
-        ctx.font = `${Math.max(14, Math.round(W / 40))}px 'Roboto', Arial, sans-serif`;
-        ctx.fillText("Leaderboard:", W / 2, H / 2 + 160);
-        leaderboard.slice(0, 5).forEach((entry, i) => {
-          let label = i === 0 ? "high score" : "";
-          ctx.fillText(
-            `${i + 1}. ${entry.name}: ${entry.time.toFixed(2)}s ${label}`,
-            W / 2,
-            H / 2 + 190 + i * 24
-          );
-        });
-      }
-      ctx.restore();
-    }
-
     // Draw balls and aim line
     function draw() {
       ctx.clearRect(0, 0, W, H);
-      drawBlackHole(ctx);
-      drawArrowAndLabel(ctx);
-      drawTimer(ctx);
       balls.forEach(ball => {
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
@@ -327,17 +210,12 @@
         ctx.lineWidth = 2;
         ctx.stroke();
       }
-      // Endgame message, name entry, leaderboard
-      if (balls.length === 0) {
-        drawEndgame(ctx);
-      }
     }
 
     // Physics, collision, energy transfer
     function update() {
       const friction = 0.98;
-      for (let i = balls.length - 1; i >= 0; i--) {
-        let ball = balls[i];
+      balls.forEach(ball => {
         ball.x += ball.vx;
         ball.y += ball.vy;
         ball.vx *= friction;
@@ -349,28 +227,12 @@
         if (ball.x > W - ball.radius) { ball.x = W - ball.radius; ball.vx *= -0.9; }
         if (ball.y < ball.radius) { ball.y = ball.radius; ball.vy *= -0.9; }
         if (ball.y > H - ball.radius) { ball.y = H - ball.radius; ball.vy *= -0.9; }
-        // Black hole check
-        let dx = ball.x - blackHole.x();
-        let dy = ball.y - blackHole.y();
-        let dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < blackHole.radius + ball.radius * 0.7) {
-          balls.splice(i, 1);
-        }
-      }
+      });
       // Ball-ball collision
       for (let i = 0; i < balls.length; i++) {
         for (let j = i + 1; j < balls.length; j++) {
           resolveBallCollision(balls[i], balls[j]);
         }
-      }
-      // Timer logic
-      if (timerRunning) {
-        elapsedTime = (Date.now() - startTime) / 1000;
-      }
-      // Endgame logic
-      if (balls.length === 0 && timerRunning) {
-        timerRunning = false;
-        nameEntryActive = true;
       }
     }
 
@@ -418,39 +280,6 @@
       requestAnimationFrame(loop);
     }
     loop();
-
-    // Button click handling
-    canvas.addEventListener('click', function(e) {
-      if (balls.length === 0) {
-        let rect = canvas.getBoundingClientRect();
-        let x = e.clientX - rect.left;
-        let y = e.clientY - rect.top;
-        // Quit button
-        if (x > W / 2 - 120 && x < W / 2 - 20 && y > H / 2 && y < H / 2 + 40) {
-          window.location.href = "index.html";
-        }
-        // Restart button
-        if (x > W / 2 + 20 && x < W / 2 + 120 && y > H / 2 && y < H / 2 + 40) {
-          setupBalls();
-        }
-      }
-    });
-
-    // Name entry and leaderboard update
-    document.addEventListener("keydown", function(e) {
-      if (nameEntryActive) {
-        if (e.key === "Enter" && playerName.length > 0) {
-          leaderboard.push({ name: playerName, time: elapsedTime });
-          leaderboard.sort((a, b) => a.time - b.time);
-          localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-          nameEntryActive = false;
-        } else if (e.key === "Backspace") {
-          playerName = playerName.slice(0, -1);
-        } else if (e.key.length === 1 && playerName.length < 12) {
-          playerName += e.key;
-        }
-      }
-    });
 
     // Resize and reset balls on orientation change or resize
     window.addEventListener('resize', () => {
