@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>pool</title>
+  <title>Pool: Magic Black Hole of Doom</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     html, body {
@@ -42,26 +42,12 @@
       padding: 4px 8px;
       border-radius: 4px;
     }
-.back-link:hover {
-  background: none;
-  outline: none;
-  box-shadow: none;
-}
-    /* Remove focus outline for mouse clicks, keep for keyboard navigation */
-.back-link:focus {
-  outline: none;
-  box-shadow: none;
-}
-.back-link:focus-visible {
-  outline: auto;
-}
   </style>
 </head>
 <body>
   <a href="index.html" class="back-link">← Back to index</a>
   <canvas id="pool-canvas"></canvas>
   <script>
-    // --- Minimalistic Pool Ball Game ---
     const canvas = document.getElementById('pool-canvas');
     const ctx = canvas.getContext('2d');
 
@@ -73,18 +59,11 @@
       W = window.innerWidth;
       H = window.innerHeight;
       const dpr = window.devicePixelRatio || 1;
-
-      // Set CSS size
       canvas.style.width = W + "px";
       canvas.style.height = H + "px";
-      // Set actual pixel buffer size
       canvas.width = Math.round(W * dpr);
       canvas.height = Math.round(H * dpr);
-
-      // Scale context so drawing coordinates match CSS pixels
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // Reposition balls if needed (optional: keep balls in bounds)
       balls.forEach(ball => {
         ball.x = Math.min(Math.max(ball.x, ball.radius), W - ball.radius);
         ball.y = Math.min(Math.max(ball.y, ball.radius), H - ball.radius);
@@ -93,25 +72,24 @@
 
     // Ball colors (15 + cue)
     const ballColors = [
-      "#FFD700", "#8B0000", "#808000", "#FFA500", "#800080", "#FFA500", "#A52A2A", "#FF0000",
-      "#FF4500", "#00FFFF", "#FF69B4", "#B22222", "#228B22", "#8B4513", "#ADFF2F"
+      "#1493ff", "#ff8014", "#ff1493", "#FFA500", "#800080", "#FFA500", "#ffff66", "#FF0000",
+      "#FF4500", "#00FFFF", "#FF69B4", "#B22222", "#228B22", "#1edc59", "#ADFF2F"
     ];
 
     // Ball setup
     let balls = [];
-    let ballRadius = Math.max(14, Math.min(W, H) / 32); // scale radius to screen
+    let ballRadius = Math.max(14, Math.min(W, H) / 32);
 
     function setupBalls() {
       balls = [];
       ballRadius = Math.max(14, Math.min(W, H) / 32);
-      let startX = W/2;
-      let startY = H/4;
+      let startX = W / 2;
+      let startY = H / 4;
       let colorIndex = 0;
-
       // Triangle formation: 5 rows
       for (let row = 0; row < 5; row++) {
         for (let col = 0; col <= row; col++) {
-          let x = startX + (col - row/2) * (ballRadius * 2.1);
+          let x = startX + (col - row / 2) * (ballRadius * 2.1);
           let y = startY + row * (ballRadius * 1.8);
           balls.push({
             x, y, vx: 0, vy: 0, radius: ballRadius, color: ballColors[colorIndex++]
@@ -119,39 +97,187 @@
         }
       }
       // Cue ball
-      balls.push({ x: W/2, y: H - ballRadius*4, vx: 0, vy: 0, radius: ballRadius, color: "#fff" });
+      balls.push({ x: W / 2, y: H - ballRadius * 4, vx: 0, vy: 0, radius: ballRadius, color: "#fff" });
     }
 
     setupBalls();
 
-    // Pool stick state
-    let stick = { x: balls[balls.length-1].x, y: balls[balls.length-1].y, angle: -Math.PI/2, pulling: false, pullDist: 0, dragging: false };
-    let selectedBall = balls[balls.length-1];
+    // Black hole properties
+    const blackHole = {
+      x: () => W - 80,
+      y: () => 80,
+      radius: 40
+    };
 
-    // Draw balls and stick (no highlight/border)
+    // Aiming Mechanic
+    let aiming = false;
+    let aimX = 0, aimY = 0;
+    let selectedBall = null;
+
+    // Mouse input
+    canvas.addEventListener('mousedown', function(e) {
+      if (balls.length === 0) return;
+      let rect = canvas.getBoundingClientRect();
+      let x = e.clientX - rect.left;
+      let y = e.clientY - rect.top;
+      selectedBall = null;
+      let minDist = Infinity;
+      balls.forEach(ball => {
+        let dx = x - ball.x;
+        let dy = y - ball.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < ball.radius + 20 && dist < minDist) {
+          selectedBall = ball;
+          minDist = dist;
+        }
+      });
+      if (selectedBall) {
+        aiming = true;
+        aimX = x;
+        aimY = y;
+      }
+    });
+
+    canvas.addEventListener('mousemove', function(e) {
+      if (aiming && selectedBall) {
+        let rect = canvas.getBoundingClientRect();
+        aimX = e.clientX - rect.left;
+        aimY = e.clientY - rect.top;
+      }
+    });
+
+    canvas.addEventListener('mouseup', function(e) {
+      if (aiming && selectedBall) {
+        let dx = selectedBall.x - aimX;
+        let dy = selectedBall.y - aimY;
+        selectedBall.vx += dx / 10;
+        selectedBall.vy += dy / 10;
+        aiming = false;
+        selectedBall = null;
+      }
+    });
+
+    // Touch input
+    canvas.addEventListener('touchstart', function(e) {
+      if (balls.length === 0) return;
+      let rect = canvas.getBoundingClientRect();
+      let x = e.touches[0].clientX - rect.left;
+      let y = e.touches[0].clientY - rect.top;
+      selectedBall = null;
+      let minDist = Infinity;
+      balls.forEach(ball => {
+        let dx = x - ball.x;
+        let dy = y - ball.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < ball.radius + 20 && dist < minDist) {
+          selectedBall = ball;
+          minDist = dist;
+        }
+      });
+      if (selectedBall) {
+        aiming = true;
+        aimX = x;
+        aimY = y;
+      }
+    });
+
+    canvas.addEventListener('touchmove', function(e) {
+      if (aiming && selectedBall) {
+        let rect = canvas.getBoundingClientRect();
+        aimX = e.touches[0].clientX - rect.left;
+        aimY = e.touches[0].clientY - rect.top;
+      }
+    });
+
+    canvas.addEventListener('touchend', function(e) {
+      if (aiming && selectedBall) {
+        let dx = selectedBall.x - aimX;
+        let dy = selectedBall.y - aimY;
+        selectedBall.vx += dx / 10;
+        selectedBall.vy += dy / 10;
+        aiming = false;
+        selectedBall = null;
+      }
+    });
+
+    // Draw black hole (sparkly, purply/black)
+function drawBlackHole(ctx) {
+  let x = blackHole.x();
+  let y = blackHole.y();
+  let r = blackHole.radius;
+  // Gradient: purple center fading to black
+  let grad = ctx.createRadialGradient(x, y, 10, x, y, r);
+  grad.addColorStop(0, "#a020f0");   // purple
+  grad.addColorStop(0.5, "#4b006e"); // deep purple
+  grad.addColorStop(1, "#000");      // black
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, 2 * Math.PI);
+  ctx.fillStyle = grad;
+  ctx.shadowColor = "#a020f0";
+  ctx.shadowBlur = 20;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+    // Draw curved arrow and handwriting label
+    function drawArrowAndLabel(ctx) {
+      let x = blackHole.x();
+      let y = blackHole.y();
+      ctx.save();
+      // Handwriting label
+      ctx.font = "12px 'Comic Sans MS', 'Caveat', cursive";
+      ctx.fillStyle = "#a020f0";
+      ctx.textAlign = "right";
+      ctx.fillText("magic black hole of doom", W - 12, 30);
+      ctx.restore();
+    }
+
+    // Draw balls and aim line
     function draw() {
-      ctx.clearRect(0,0,W,H);
+      ctx.clearRect(0, 0, W, H);
+      drawBlackHole(ctx);
+      drawArrowAndLabel(ctx);
       balls.forEach(ball => {
         ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.radius, 0, 2*Math.PI);
+        ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
         ctx.fillStyle = ball.color;
         ctx.fill();
       });
-      // Stick (thinner, minimal)
-      if (stick.dragging || stick.pulling) {
+      // Draw aim line
+      if (aiming && selectedBall) {
+        ctx.beginPath();
+        ctx.moveTo(selectedBall.x, selectedBall.y);
+        ctx.lineTo(aimX, aimY);
+        ctx.strokeStyle = 'yellow';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      // Endgame message
+      if (balls.length === 0) {
         ctx.save();
-        ctx.translate(stick.x, stick.y);
-        ctx.rotate(stick.angle);
-        ctx.fillStyle = "#8B4513";
-        ctx.fillRect(-2, 0, 4, -stick.pullDist-ballRadius*4.5);
+        ctx.fillStyle = "#a020f0";
+        ctx.font = "18px 'Comic Sans MS', 'Caveat', cursive";
+        ctx.textAlign = "center";
+        ctx.fillText("welp everything is now in the ominous black hole", W / 2, H / 2 - 40);
+        // Draw buttons
+        ctx.font = "bold 14px sans-serif";
+        //ctx.fillStyle = "#fff";
+        //ctx.fillRect(W / 2 - 120, H / 2, 100, 40);
+       //ctx.fillRect(W / 2 + 20, H / 2, 100, 40);
+        ctx.fillStyle = "#a020f0";
+        ctx.fillText("Quit", W / 2 - 70, H / 2 + 28);
+        ctx.fillText("Play this dumb ahh game again!", W / 2 + 70, H / 2 + 28);
         ctx.restore();
       }
     }
 
-    // Realistic physics: friction, collision, energy transfer
+    // Physics, collision, energy transfer
     function update() {
       const friction = 0.98;
-      balls.forEach(ball => {
+      for (let i = balls.length - 1; i >= 0; i--) {
+        let ball = balls[i];
         ball.x += ball.vx;
         ball.y += ball.vy;
         ball.vx *= friction;
@@ -160,42 +286,59 @@
         if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
         // Wall bounce
         if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx *= -0.9; }
-        if (ball.x > W-ball.radius) { ball.x = W-ball.radius; ball.vx *= -0.9; }
+        if (ball.x > W - ball.radius) { ball.x = W - ball.radius; ball.vx *= -0.9; }
         if (ball.y < ball.radius) { ball.y = ball.radius; ball.vy *= -0.9; }
-        if (ball.y > H-ball.radius) { ball.y = H-ball.radius; ball.vy *= -0.9; }
-      });
+        if (ball.y > H - ball.radius) { ball.y = H - ball.radius; ball.vy *= -0.9; }
+        // Black hole check
+        let dx = ball.x - blackHole.x();
+        let dy = ball.y - blackHole.y();
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < blackHole.radius + ball.radius * 0.7) {
+          balls.splice(i, 1);
+        }
+      }
       // Ball-ball collision
-      for (let i=0; i<balls.length; i++) {
-        for (let j=i+1; j<balls.length; j++) {
-          ballCollision(balls[i], balls[j]);
+      for (let i = 0; i < balls.length; i++) {
+        for (let j = i + 1; j < balls.length; j++) {
+          resolveBallCollision(balls[i], balls[j]);
         }
       }
     }
 
-    // Realistic 2D elastic collision
-    function ballCollision(ballA, ballB) {
+    // 2D elastic collision
+    function resolveBallCollision(ballA, ballB) {
       const dx = ballB.x - ballA.x;
       const dy = ballB.y - ballA.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const minDist = ballA.radius + ballB.radius;
-      if (dist < minDist) {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < ballA.radius + ballB.radius) {
+        // Move balls so they just touch
+        const overlap = (ballA.radius + ballB.radius) - dist;
         const nx = dx / dist;
         const ny = dy / dist;
-        const dvx = ballA.vx - ballB.vx;
-        const dvy = ballA.vy - ballB.vy;
-        const vn = dvx * nx + dvy * ny;
-        if (vn < 0) {
-          const impulse = -vn;
-          ballA.vx += impulse * nx;
-          ballA.vy += impulse * ny;
-          ballB.vx -= impulse * nx;
-          ballB.vy -= impulse * ny;
-        }
-        const overlap = minDist - dist + 0.1;
+
+        // Separate balls
         ballA.x -= nx * overlap / 2;
         ballA.y -= ny * overlap / 2;
         ballB.x += nx * overlap / 2;
         ballB.y += ny * overlap / 2;
+
+        // Relative velocity
+        const dvx = ballB.vx - ballA.vx;
+        const dvy = ballB.vy - ballA.vy;
+
+        // Velocity along the normal
+        const vn = dvx * nx + dvy * ny;
+
+        // Only resolve if balls are moving towards each other
+        if (vn < 0) {
+          // Conservation of momentum (equal mass)
+          const impulse = -2 * vn / 2; // both balls have mass=1
+          ballA.vx -= impulse * nx;
+          ballA.vy -= impulse * ny;
+          ballB.vx += impulse * nx;
+          ballB.vy += impulse * ny;
+        }
       }
     }
 
@@ -207,100 +350,30 @@
     }
     loop();
 
-    // Input: mouse (desktop) and touch (mobile)
-    let dragging = false;
-    function getPointer(e) {
-      let rect = canvas.getBoundingClientRect();
-      if (e.touches) {
-        return {
-          x: e.touches[0].clientX - rect.left,
-          y: e.touches[0].clientY - rect.top
-        };
-      } else {
-        return {
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        };
-      }
-    }
-    function startDrag(e) {
-      let p = getPointer(e);
-      let closest = null, minDist = Infinity;
-      balls.forEach(ball => {
-        let dx = p.x - ball.x, dy = p.y - ball.y;
-        let dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < ball.radius + 20 && dist < minDist) {
-          minDist = dist;
-          closest = ball;
+    // Button click handling
+    canvas.addEventListener('click', function(e) {
+      if (balls.length === 0) {
+        let rect = canvas.getBoundingClientRect();
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+        // Quit button
+        if (x > W / 2 - 120 && x < W / 2 - 20 && y > H / 2 && y < H / 2 + 40) {
+          window.location.href = "index.html";
         }
-      });
-      if (closest) {
-        selectedBall = closest;
-        stick.x = selectedBall.x;
-        stick.y = selectedBall.y;
-        dragging = true;
-        stick.dragging = true;
-        stick.pulling = true;
-      }
-    }
-    function moveDrag(e) {
-      if (dragging) {
-        let p = getPointer(e);
-        let dx = p.x - selectedBall.x;
-        let dy = p.y - selectedBall.y;
-        stick.angle = Math.atan2(dy, dx);
-        stick.pullDist = Math.min(ballRadius * 7, Math.sqrt(dx * dx + dy * dy));
-        stick.x = selectedBall.x;
-        stick.y = selectedBall.y;
-      }
-    }
-    function endDrag(e) {
-      if (dragging) {
-        selectedBall.vx += -Math.cos(stick.angle) * stick.pullDist * 0.35;
-        selectedBall.vy += -Math.sin(stick.angle) * stick.pullDist * 0.35;
-        stick.pulling = false;
-        stick.pullDist = 0;
-        stick.dragging = false;
-        dragging = false;
-      }
-    }
-    // Mouse
-    canvas.addEventListener('mousedown', startDrag);
-    canvas.addEventListener('mousemove', moveDrag);
-    canvas.addEventListener('mouseup', endDrag);
-    // Touch
-    canvas.addEventListener('touchstart', startDrag);
-    canvas.addEventListener('touchmove', moveDrag);
-    canvas.addEventListener('touchend', endDrag);
-    // Stick follows mouse when not dragging
-    canvas.addEventListener('mousemove', function(e) {
-      if (!dragging) {
-        let p = getPointer(e);
-        let dx = p.x - selectedBall.x, dy = p.y - selectedBall.y;
-        stick.angle = Math.atan2(dy, dx);
-        stick.x = selectedBall.x;
-        stick.y = selectedBall.y;
-        stick.pullDist = 0;
+        // Restart button
+        if (x > W / 2 + 20 && x < W / 2 + 120 && y > H / 2 && y < H / 2 + 40) {
+          setupBalls();
+        }
       }
     });
-    canvas.addEventListener('touchmove', function(e) {
-      if (!dragging) {
-        let p = getPointer(e);
-        let dx = p.x - selectedBall.x, dy = p.y - selectedBall.y;
-        stick.angle = Math.atan2(dy, dx);
-        stick.x = selectedBall.x;
-        stick.y = selectedBall.y;
-        stick.pullDist = 0;
-      }
-    });
-    // Re-setup balls and resize canvas on orientation change or resize
+
+    // Resize and reset balls on orientation change or resize
     window.addEventListener('resize', () => {
       resizeCanvas();
       setupBalls();
-      stick.x = balls[balls.length-1].x;
-      stick.y = balls[balls.length-1].y;
-      selectedBall = balls[balls.length-1];
+      selectedBall = null;
     });
+
     // Initial sizing
     resizeCanvas();
   </script>
