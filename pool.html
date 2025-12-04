@@ -246,9 +246,12 @@
     function moveDrag(e) {
       if (dragging) {
         let p = getPointer(e);
-        let dx = p.x - selectedBall.x, dy = p.y - selectedBall.y;
+        let dx = p.x - selectedBall.x;
+        let dy = p.y - selectedBall.y;
         stick.angle = Math.atan2(dy, dx);
-        stick.pullDist = Math.min(ballRadius*7, Math.sqrt(dx*dx + dy*dy));
+        stick.pullDist = Math.min(ballRadius * 7, Math.sqrt(dx * dx + dy * dy));
+        stick.x = selectedBall.x;
+        stick.y = selectedBall.y;
       }
     }
     function endDrag(e) {
